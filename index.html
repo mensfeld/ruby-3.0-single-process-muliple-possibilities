@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>Ruby 3.0 - Single process, multiple possibilities</title>
+
+		<meta name="description" content="Ruby 3.0 - Single process, multiple possibilities">
+		<meta name="author" content="Maciej Mensfeld">
+
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme.css" id="theme">
+		<link rel="stylesheet" href="css/custom.css" id="theme">
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<div class="slides">
+        <section>
+          <h1>Ruby 3.0 - Single process, multiple possibilities</h1>
+        </section>
+
+        <section>
+          <h2>$ whoami</h2>
+
+          <p>
+            <a href="http://mensfeld.pl">Maciej Mensfeld</a>
+          </p>
+
+          <p>
+            <ul style="list-style: none; text-align: center;">
+              <li>
+                Software Engineer (10 years with Ruby)
+              </li>
+              <li>
+                <a href="https://github.com/karafka/karafka">Karafka</a> creator
+              </li>
+              <li>
+                Founder of <a href="https://coditsu.io">Coditsu</a> - a comprehensive platform for insightful code analysis
+              </li>
+              <li>
+                <a href="http://krug.org.pl/">KRUG</a> (Kraków Ruby Users Group) organizer
+              </li>
+            </ul>
+          </p>
+        </section>
+
+        <section>
+          <h2>$ whoami</h2>
+
+          <p>
+            www: <a href="https://coditsu.io">coditsu.io</a> <br>
+            www: <a href="http://mensfeld.pl">mensfeld.pl</a> <br>
+            twitter: <a href="http://twitter.com/maciejmensfeld">@maciejmensfeld</a> <br>
+            e-mail: <a href="mailto:maciej@coditsu.io">maciej@coditsu.io</a>
+          </p>
+        </section>
+
+        <section>
+          <h2>Agenda</h2>
+
+          <h3>Ruby 2.*</h3>
+
+          <ul>
+            <li>Objects ownership management</li>
+            <li>GIL/GVL</li>
+            <li>Garbage Collector</li>
+            <li>Global Method Cache</li>
+            <li>Deployment</li>
+            <li>Limitations</li>
+            <li>Immutability</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Agenda</h2>
+
+          <h3>Ruby 3.0 goodies</h3>
+
+          <ul>
+            <li>Guilds</li>
+            <li>Channels</li>
+            <li>Immutability</li>
+            <li>Soft typing</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Agenda</h2>
+
+          <h3>Ruby 3.0 challenges</h3>
+
+          <ul>
+            <li>Objects ownership management</li>
+            <li>Giant Guild Lock</li>
+            <li>Garbage Collector</li>
+            <li>Global Method Cache</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Agenda</h2>
+
+          <h3>Ruby 3.0 vs Ruby 2.*</h3>
+
+          <ul>
+            <li>Memory usage</li>
+            <li>Performance</li>
+            <li>Deployment</li>
+            <li>Design and development</li>
+            <li>Compatibility</li>
+            <li>Getting ready</li>
+          </ul>
+        </section>
+
+        <section>
+          <p>
+            Everything said here is based on:
+
+            <ul>
+              <li>(Too) Many assumptions</li>
+              <li>My talks with Ruby core team members (recently Hiroshi Shibata)</li>
+              <li>My experience with Ruby 2.* and Elixir</li>
+              <li>Examples from other languages</li>
+              <li>Blog posts and discussions amongs Ruby community</li>
+              <li>Presentations and other materials on Ruby 3.0</li>
+            </ul>
+          </p>
+        </section>
+
+        <section>
+          <h2>Ruby 2.*</h2>
+          <h3>Objects ownership management</h3>
+
+          <p class="fragment">
+            There's <span style="color: red;">none</span>.
+          </p>
+
+          <p class="fragment">
+            If you manage to get a pointer/reference to an object, you can work with it (or even unfreeze).
+          </p>
+
+          <p class="fragment">
+            The only limitation is the access control layer.
+          </p>
+        </section>
+
+        <section>
+          <h2>Ruby 2.*</h2>
+          <h3>Objects ownership management</h3>
+
+          <pre><code>
+require 'fiddle'
+str = 'water'.freeze
+str.frozen? # true
+
+memory_address = str.object_id * 2
+Fiddle::Pointer.new(memory_address)[1] &= ~8
+str.frozen? # false
+          </code></pre>
+        </section>
+
+        <section>
+          <h2>Ruby 2.*</h2>
+          <h3>GIL/GVL</h3>
+
+          <p>
+             It's a lock around the execution of Ruby code. This means that in a multi-threaded context,
+             o nly one thread can execute Ruby code at any one time.
+          </p>
+
+          <p>
+            The GIL exists to protect Ruby internals from race conditions that could corrupt data.
+          </p>
+        </section>
+
+        <section>
+          <h2>Ruby 2.*</h2>
+          <h3>GIL/GVL</h3>
+
+          <img src="img/gil.png" style="background: none; border: 5px solid black; box-shadow: 0 0 0 0 #fff;">
+
+          <small>https://www.igvita.com/2008/11/13/concurrency-is-a-myth-in-ruby/</small>
+        </section>
+
+        <section>
+          <h2>Ruby 2.*</h2>
+          <h3>GIL/GVL</h3>
+
+          <p>
+           I/O-bound operations are tasks whose speed is limited by the speed of a computer’s I/O.
+           These I/O operations are handled outside of the Ruby interpreter in kernel space.
+
+           Since they are handled outside of the Ruby interpreter, I/O operations that are executed within threads are no longer restricted from running in parallel by the GIL.
+          </p>
+
+          <small>https://blog.fluentz.io/learn-how-to-achieve-parallelism-with-ruby-i-o-bound-threads-a29c92aff58c</small>
+        </section>
+
+        <section>
+          <h3>Ruby 2.*</h3>
+          <h4>Garbage Collector</h4>
+          <h5>Ruby Generational Garbage Collector (RGenGC)</h5>
+
+          <img src="img/gc.png" style="width: 70%; background: none; border: 5px solid black; box-shadow: 0 0 0 0 #fff;">
+          <small>https://www.speedshop.co/2017/03/09/a-guide-to-gc-stat.html</small>
+        </section>
+
+        <section>
+          <h2>Ruby 2.*</h2>
+          <h3>Global Method Cache</h3>
+
+          <p>
+            Global Method Cache is a cache for method definitions.
+            <br>
+            <br>
+            Ruby uses the global method cache to save a mapping between the receiver and implementer classes.
+          </p>
+        </section>
+
+        <section>
+          <h2>Ruby 2.*</h2>
+          <h3>Global Method Cache</h3>
+
+          <p>
+            The global method cache allows Ruby to skip the method lookup process the next time your code calls a method listed in it. After your code has called Fixnum#times once, Ruby knows that it can execute the Integer#times method, regardless of from where in your program you call times .
+          </p>
+
+          <small>Ruby under a Microscope</small>
+        </section>
+
+        <section>
+          <h2>Ruby 2.*</h2>
+          <h3>Global Method Cache</h3>
+
+          <p>
+            Careless and often invalidation of this cache can have a quite big impact on our Ruby software. Especially when you have a multithreaded applications, since there’s a single global method cache per process. And constant invalidating, will require a method lookup again and again…
+          </p>
+
+          <small>https://mensfeld.pl/2015/04/ruby-global-method-cache-invalidation-impact-on-a-single-and-multithreaded-applications/</small>
+        </section>
+
+        <section>
+          <h2>Ruby 2.*</h2>
+          <h3>Global Method Cache</h3>
+
+          <img src="img/gmc.png" style="width: 70%; background: none; border: 5px solid black; box-shadow: 0 0 0 0 #fff;">
+          <small>https://mensfeld.pl/2015/04/ruby-global-method-cache-invalidation-impact-on-a-single-and-multithreaded-applications/</small>
+        </section>
+
+        <section>
+          <h2>Ruby 2.*</h2>
+          <h3>Deployment</h3>
+
+          <ul>
+            <li>Single process role per process</li>
+            <li>Puma/Sidekiq/Clockwork/Anything else</li>
+            <li>Capistrano/Docker/Heroku</li>
+            <li>Heavy memory usage</li>
+            <li>Long shutdown time</li>
+            <li>Slow startup until full performance reached</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Ruby 2.*</h2>
+          <h3>Immutability</h3>
+
+          <ul>
+            <li>Object#freeze</li>
+            <li>Class#freeze</li>
+            <li>Frozen String Literals In Ruby 2.3</li>
+            <li>ice_nine gem - deep freezing</li>
+            <li>hamster gem - set of persistent, immutable data structure classes</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Ruby 2.*</h2>
+          <h3>Limitations</h3>
+
+          <ul>
+            <li>GIL</li>
+            <li>Single process role</li>
+            <li>GC</li>
+            <li>Parallel execution</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 goodies</h2>
+          <h3>Guilds</h3>
+
+          <ul>
+            <li>Guilds have at least one thread (and a thread has a fiber)</li>
+            <li>Threads in different guilds can run in parallel</li>
+            <li>Threads in a same guild can not run in parallel because of GIL/GVL/GGL (Giant Guild Lock)</li>
+            <li>A guild can’t access the objects of other guilds</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 goodies</h2>
+          <h3>Guilds</h3>
+
+          <ul>
+            <li>Guilds are allowed to communicate with each other using channels (Guild::Channel)</li>
+            <li>Objects can be copied between guilds (deep copy)</li>
+            <li>Objects can be moved between guilds</li>
+            <li>Immutable objects (deeply immutable) can be shared between guilds</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 goodies</h2>
+          <h3>Guilds</h3>
+
+          <img src="img/guilds.png" style="width: 70%; background: none; border: 5px solid black; box-shadow: 0 0 0 0 #fff;">
+
+          <small>http://olivierlacan.com/posts/concurrency-in-ruby-3-with-guilds/</small>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 goodies</h2>
+          <h3>Guilds</h3>
+
+          <img src="img/guilds2.png" style="width: 70%; background: none; border: 5px solid black; box-shadow: 0 0 0 0 #fff;">
+
+          <small>http://olivierlacan.com/posts/concurrency-in-ruby-3-with-guilds/</small>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 goodies</h2>
+          <h3>Channels</h3>
+
+          <p>
+            Guilds can communicate with each other using the Guild::Channel interface which allows
+            for the copying or moving of objects across the channel to another Guild.
+          </p>
+
+          <small>http://olivierlacan.com/posts/concurrency-in-ruby-3-with-guilds/</small>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 goodies</h2>
+          <h3>Channels</h3>
+
+          <img src="img/move.png" style="width: 70%; background: none; border: 5px solid black; box-shadow: 0 0 0 0 #fff;">
+
+          <small>http://olivierlacan.com/posts/concurrency-in-ruby-3-with-guilds/</small>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 goodies</h2>
+          <h3>Channels</h3>
+
+          <img src="img/copy.png" style="width: 70%; background: none; border: 5px solid black; box-shadow: 0 0 0 0 #fff;">
+
+          <small>http://olivierlacan.com/posts/concurrency-in-ruby-3-with-guilds/</small>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 goodies</h2>
+          <h3>Immutability</h3>
+
+          <ul>
+            <li>String immutable by default</li>
+            <li>Easier / faster immutable structures sharing</li>
+            <li>A bit of functional programming FTW</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 goodies</h2>
+          <h3>Soft typing (proposal)</h3>
+
+          <pre><code>
+def connect(r -> Stream, c -> Client) ->  Fiber
+def connect(Stream r, Client c) -> Fiber
+            </code></pre>
+
+          <small>https://bugs.ruby-lang.org/issues/9999</small>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 challenges</h2>
+          <h3>Objects ownership management</h3>
+
+          <p>
+            Objects will have guild owners. It means that Ruby will have to have references to which guild an object belongs.
+          </p>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 challenges</h2>
+          <h3>Objects ownership management</h3>
+
+          <p>
+            It means that Ruby will have to have some sort of checker that will run either on:
+          </p>
+
+          <ul>
+            <li>every object access</li>
+            <li>every object access for objects that were transfered at least once (flag or something?)</li>
+            <li>every object access of an object that is not frozen and references in other guilds</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 challenges</h2>
+          <h3>Objects ownership management</h3>
+
+          <p>
+            Ruby already checks the class of each object on it’s access, so maybe this could be combined together.
+          </p>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 challenges</h2>
+          <h3>Giant Guild Lock</h3>
+
+          <ul>
+            <li>Will it be enough for Ruby dynamic character?</li>
+            <li>What about runtime metaprogramming?</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 challenges</h2>
+          <h3>Garbage Collector</h3>
+
+          <ul>
+            <li>Will there be a single GC for all the guilds/threads?</li>
+            <li>If so - a single guild will affect other</li>
+            <li>If no - there will be a CPU overhead on having multiple GC executions</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 challenges</h2>
+          <h3>Global Method Cache</h3>
+
+          <ul>
+            <li>Will have even a bigger impact that it has now</li>
+            <li>Will have to remain in Ruby</li>
+            <li>How to lower its impact on other Guilds</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 vs Ruby 2.*</h2>
+          <h3>Memory usage</h3>
+
+          <h5>No one knows BUT it needs to perform way better (otherwise where's the point?)</h5>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 vs Ruby 2.*</h2>
+          <h3>Performance</h3>
+
+          <h5>Ruby core team aims to make it 3 times faster (Ruby 3x3)</h5>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 vs Ruby 2.*</h2>
+          <h3>Deployment and code execution</h3>
+
+          <ul>
+            <li class="fragment">Single process per host</li>
+            <li class="fragment">Different deployment flow</li>
+            <li class="fragment">Hot swapping probably won't happen</li>
+            <li class="fragment">Bigger systems with more specified server roles?</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 vs Ruby 2.*</h2>
+          <h3>Design and development</h3>
+
+          <p>
+            <ul>
+              <li class="fragment">More thinking, less coding</li>
+              <li class="fragment">It's already happening</li>
+              <li class="fragment">Designing stuff that won't break everything</li>
+              <li class="fragment">Designing stuff that will be ready for 3.0</li>
+              <li class="fragment">Designing stuff that will use 3.0 to its best</li>
+            </ul>
+          </p>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 vs Ruby 2.*</h2>
+          <h3>Compatibility</h3>
+
+          <ul>
+            <li class="fragment">100% compatible with 2.*</li>
+            <li class="fragment">But then performance and memory usage compatible with 2.*</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 vs Ruby 2.*</h2>
+          <h3>Getting ready</h3>
+
+          <ul>
+            <li class="fragment">Read my blog ;)</li>
+            <li class="fragment">Stop mutating things (freeze)</li>
+            <li class="fragment">Use YARD</li>
+            <li class="fragment">Design small, flexible components</li>
+            <li class="fragment"># frozen_string_literal: true</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 vs Ruby 2.*</h2>
+          <h3>Getting ready</h3>
+
+          <ul>
+            <li class="fragment">Don’t try to unlearn locking and multi threading Ruby 2 approach</li>
+            <li class="fragment">Scaling with guilds won’t be linear so don’t think it will solve all your problems</li>
+            <li class="fragment">Don't invalidate method cache during runtime (too often)</li>
+            <li class="fragment">Don't use non-threadsafe gems and libraries</li>
+          </ul>
+        </section>
+
+        <section>
+          <h1>THE END - Q &amp; A</h1>
+        </section>
+      </div>
+
+		  <div class='logo'>
+        <img src="img/logo_gray.svg" style="background: none; border: none; box-shadow: 0 0 0 0 #fff;"/>
+		  </div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+
+			// More info https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// More info https://github.com/hakimel/reveal.js#dependencies
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true },
+					{ src: 'plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
