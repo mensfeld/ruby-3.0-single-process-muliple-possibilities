@@ -4,9 +4,9 @@
 	<head>
 		<meta charset="utf-8">
 
-		<title>Ruby 3.0 - Single process, multiple possibilities</title>
+		<title>Ruby 3.0 - Single process, multiple challenges</title>
 
-		<meta name="description" content="Ruby 3.0 - Single process, multiple possibilities">
+		<meta name="description" content="Ruby 3.0 - Single process, multiple challenges">
 		<meta name="author" content="Maciej Mensfeld">
 
 		<meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,7 +26,7 @@
 
 			<div class="slides">
         <section>
-          <h1>Ruby 3.0 - Single process, multiple possibilities</h1>
+          <h1>Ruby 3.0 - Single process, multiple challenges</h1>
         </section>
 
         <section>
@@ -90,7 +90,6 @@
             <li>Guilds</li>
             <li>Channels</li>
             <li>Immutability</li>
-            <li>Soft typing</li>
           </ul>
         </section>
 
@@ -175,7 +174,7 @@ str.frozen? # false
 
           <p>
              It's a lock around the execution of Ruby code. This means that in a multi-threaded context,
-             o nly one thread can execute Ruby code at any one time.
+             only one thread can execute Ruby code at any one time.
           </p>
 
           <p>
@@ -298,6 +297,12 @@ str.frozen? # false
 
         <section>
           <h2>Ruby 3.0 goodies</h2>
+
+          <img src="img/yo.jpg" style="width: 70%; background: none; border: 5px solid black; box-shadow: 0 0 0 0 #fff;">
+        </section>
+
+        <section>
+          <h2>Ruby 3.0 goodies</h2>
           <h3>Guilds</h3>
 
           <ul>
@@ -380,8 +385,8 @@ str.frozen? # false
         </section>
 
         <section>
-          <h2>Ruby 3.0 goodies</h2>
-          <h3>Soft typing (proposal)</h3>
+          <h2>Ruby 3.0 not goodies</h2>
+          <h3>Soft typing (proposal - rejected)</h3>
 
           <pre><code>
 def connect(r -> Stream, c -> Client) ->  Fiber
@@ -512,7 +517,6 @@ def connect(Stream r, Client c) -> Fiber
           <h3>Getting ready</h3>
 
           <ul>
-            <li class="fragment">Read my blog ;)</li>
             <li class="fragment">Stop mutating things (freeze)</li>
             <li class="fragment">Use YARD</li>
             <li class="fragment">Design small, flexible components</li>
